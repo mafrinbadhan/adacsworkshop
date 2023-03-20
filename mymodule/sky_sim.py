@@ -12,7 +12,7 @@ DEC = '41:16:09'
 
 def get_radec(RA, DEC):
     """
-    # Determine Andromeda location in ra/dec degrees
+    Generate the ra/dec coordinates of Andromeda in decimal places. 
     """
 
     d, m, s = DEC.split(':')
@@ -24,11 +24,15 @@ def get_radec(RA, DEC):
 
     return(ra, dec)
 
-# make 1000 stars within 1 degree of Andromeda
-def make_stars(ra, dec, NSRC):
+def make_stars(ra, dec, num_stars): 
+    """
+    # make 1000 stars within 1 degree of Andromeda
+    # make_stars(ra:float, dec:float, num_stars:int) -> Tuple(List(float), List(float)):
+    """
+
     ras = []
     decs = []
-    for i in range(NSRC):
+    for i in range(num_stars):
         ras.append(ra + uniform(-1,1))
         decs.append(dec + uniform(-1,1))
 
