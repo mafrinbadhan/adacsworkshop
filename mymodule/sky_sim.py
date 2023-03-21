@@ -1,5 +1,5 @@
 """
-
+Calculates Stuff for Andromeda Galaxy
 """
 # convert to decimal degrees
 from math import cos, pi
@@ -12,7 +12,15 @@ DEC = '41:16:09'
 
 def get_radec(RA, DEC):
     """
-    Generate the ra/dec coordinates of Andromeda in decimal places. 
+    Generate the ra/dec coordinates of Andromeda in decimal places.
+
+    Returns
+    -------
+
+    ra: float
+        The RA, in degrees, for Andromeda
+    dec : float
+        The DEC, in degrees, for Andromeda 
     """
 
     d, m, s = DEC.split(':')
@@ -24,10 +32,10 @@ def get_radec(RA, DEC):
 
     return(ra, dec)
 
-def make_stars(ra, dec, num_stars): 
+def make_stars(ra, dec, num_stars):
     """
-    # make 1000 stars within 1 degree of Andromeda
-    # make_stars(ra:float, dec:float, num_stars:int) -> Tuple(List(float), List(float)):
+    make 1000 stars within 1 degree of Andromeda
+    make_stars(ra:float, dec:float, num_stars:int) -> Tuple(List(float), List(float)):
     """
 
     ras = []
@@ -40,9 +48,13 @@ def make_stars(ra, dec, num_stars):
 
 
 def main():
+    """
+    Defining main function
+    """
+
     ra, dec = get_radec(RA, DEC)
     ras, decs = make_stars(ra, dec, NSRC)
-  
+
     with open('catalog.csv','w', encoding='utf-8') as f:
         print ("id,ra,dec", file=f)
         for i in range(NSRC):
