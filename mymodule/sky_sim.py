@@ -1,77 +1,101 @@
-"""
-Calculates Stuff for Andromeda Galaxy
-"""
-# convert to decimal degrees
-from math import cos, pi
-from random import uniform
+#! /usr/bin/env python
+# Demonstrate that we can simulate a catalogue of stars on the sky
 
-NSRC = 1000000
-# from wikipedia
-RA = '00:42:44.3'
-DEC = '41:16:09'
+# Determine Andromeda location in ra/dec degrees
+import math
+import numpy as np
+import multiprocessing
+import sys
 
-def get_radec(RA, DEC):
-    """
-    Generate the ra/dec coordinates of Andromeda in decimal places.
+NSRC = 1_000_000
 
-    Returns
-    -------
 
-    ra: float
-        The RA, in degrees, for Andromeda
-    dec : float
-        The DEC, in degrees, for Andromeda 
-    """
+def get_radec():
+    # from wikipedia
+    ra = '00:42:44.3'
+    dec = '41:16:09'
 
-    d, m, s = DEC.split(':')
+    d, m, s = dec.split(':')
     dec = int(d)+int(m)/60+float(s)/3600
 
-    h, m, s = RA.split(':')
+    h, m, s = ra.split(':')
     ra = 15*(int(h)+int(m)/60+float(s)/3600)
-    ra = ra/cos(dec*pi/180)
+    ra = ra/math.cos(dec*math.pi/180)
+    return ra,dec
 
-    return(ra, dec)
 
-def make_stars(ra, dec, num_stars):
+def make_stars(args):
     """
-    make 1000 stars within 1 degree of Andromeda
-    make_stars(ra:float, dec:float, num_stars:int) -> Tuple(List(float), List(float)):
     """
+    #unpack the arguments
+    ra, dec, nsrc = args
+    # create an empy array for our results
+    radec = np.empty((2,nsrc))
 
-    ras = []
-    decs = []
-    for i in range(num_stars):
-        ras.append(ra + uniform(-1,1))
-        decs.append(dec + uniform(-1,1))
+    # make nsrc stars within 1 degree of ra/dec
+    radec[0,:] = np.random.uniform(ra-1, ra+1, size=nsrc)
+    radec[1,:] = np.random.uniform(dec-1, dec+1, size=nsrc)
+    
+    # return our results
+    return radec
 
-    return(ras, decs)
+def make_stars_parallel(ra, dec, nsrc=NSRC, cores=None):
+    
+    # By default use all available cores
+    # runs make stars function multiple times in parallel
+    # figure out how many processes we will use how many tasks
+    # need to figure out what work needs to be done - how many tasks need completing 
+    # what the arguments will be
+    # ideally divide work into group - each group ideally should take same amount of time
+    # child processes need to be set up to set up pool of workers - child processes
+    # send each child work 
+    # parallel processing spend all the time
+    # figure out how many child processes 
+    # simulate large no of points - simulate this no of points
+    if cores is None:
+        cores = multiprocessing.cpu_count()
+    
 
-
-def main():
-    """
-    Defining main function
-    """
-
-    ra, dec = get_radec(RA, DEC)
-    ras, decs = make_stars(ra, dec, NSRC)
-
-    with open('catalog.csv','w', encoding='utf-8') as f:
-        print ("id,ra,dec", file=f)
-        for i in range(NSRC):
-		#print("{0:07d}, {1:12f}, {2:12f}".format(i, ras[i], decs[i]), file=f)
-            print(f"{i:07d}, {ras[i]:12f}, {decs[i]:12f}", file=f)
-
-if __name__ == '__main__':
-    main()
-
-# now write these to a csv file for use by my other program
-
-#f.close()
+    # 20 jobs each doing 1/20th of the sources
+    group_size = nsrc//20
+    args = [(ra, dec, group_size) for _ in range(20)]
 
 
-#import mymodule.sky_sim as ss
+    # start a new process for each task, hopefully to reduce residual
+    # memory use
+    ctx = multiprocessing.get_context()
+    pool = ctx.Pool(processes=cores, maxtasksperchild=1)
 
-#ss.get_radec()
-#ss.make_stars(10, -53, 10)
-#help(ss.get_radec)
-#ss.make_stars(*a, 10)
+    try:
+        # call make_posisions(a) for each a in args
+        results = pool.map(make_stars, args, chunksize=1)
+    except KeyboardInterrupt:
+        # stop all the processes if the user calls the kbd interrupt
+        print("Caught kbd interrupt")
+        pool.close()
+        sys.exit(1)
+    else:
+        # join the pool means wait until there are results
+        pool.close()
+        pool.join()
+
+        # crete an empty array to hold our results
+        radec = np.empty((2,nsrc),dtype=np.float64)
+
+        # iterate over the results (a list of whatever was returned from make_stars)
+        for i,r in enumerate(results):
+            # store the returned results in the right place in our array
+            start = i*group_size
+            end = start + group_size
+            radec[:,start:end] = r
+            
+    return radec
+
+if __name__ == "__main__":
+    ra,dec = get_radec()
+    pos = make_stars_parallel(ra, dec, NSRC, 2)
+    # now write these to a csv file for use by my other program
+    with open('catalog.csv', 'w') as f:
+        print("id,ra,dec", file=f)
+        np.savetxt(f, np.column_stack((np.arange(NSRC), pos[0,:].T, pos[1,:].T)),fmt='%07d, %12f, > %12f')
+        
